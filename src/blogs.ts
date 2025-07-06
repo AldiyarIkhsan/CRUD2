@@ -6,23 +6,32 @@ let blogs: Blog[] = [];
 let nextBlogId = 1;
 
 export const setupBlogs = (app: Express) => {
-  app.use(basicAuthMiddleware);
-
-  app.get("/blogs", (_req: Request, res: Response) => {
+  // GET all blogs (no auth required)
+  app.get("/ht_02/api/blogs", (_req: Request, res: Response) => {
     res.status(200).json(blogs.map(b => ({
-      ...b,
-      id: b.id.toString()
+      id: b.id.toString(),
+      name: b.name,
+      description: b.description,
+      websiteUrl: b.websiteUrl
     })));
   });
 
-  app.get("/blogs/:id", (req: Request, res: Response) => {
+  // GET blog by id (no auth required)
+  app.get("/ht_02/api/blogs/:id", (req: Request, res: Response) => {
     const blog = blogs.find(b => b.id === +req.params.id);
     if (!blog) return res.sendStatus(404);
-    res.status(200).json({ ...blog, id: blog.id.toString() });
+    res.status(200).json({
+      id: blog.id.toString(),
+      name: blog.name,
+      description: blog.description,
+      websiteUrl: blog.websiteUrl
+    });
   });
 
+  // POST blog (auth required)
   app.post(
-    "/blogs",
+    "/ht_02/api/blogs",
+    basicAuthMiddleware,
     blogValidationRules,
     handleInputErrors,
     (req: Request, res: Response) => {
@@ -34,12 +43,19 @@ export const setupBlogs = (app: Express) => {
         websiteUrl,
       };
       blogs.push(newBlog);
-      res.status(201).json({ ...newBlog, id: newBlog.id.toString() });
+      res.status(201).json({
+        id: newBlog.id.toString(),
+        name: newBlog.name,
+        description: newBlog.description,
+        websiteUrl: newBlog.websiteUrl
+      });
     }
   );
 
+  // PUT blog (auth required)
   app.put(
-    "/blogs/:id",
+    "/ht_02/api/blogs/:id",
+    basicAuthMiddleware,
     blogValidationRules,
     handleInputErrors,
     (req: Request, res: Response) => {
@@ -54,16 +70,18 @@ export const setupBlogs = (app: Express) => {
     }
   );
 
-  app.delete("/blogs/:id", (req: Request, res: Response) => {
+  // DELETE blog (auth required)
+  app.delete("/ht_02/api/blogs/:id", basicAuthMiddleware, (req: Request, res: Response) => {
     const index = blogs.findIndex(b => b.id === +req.params.id);
     if (index === -1) return res.sendStatus(404);
     blogs.splice(index, 1);
     res.sendStatus(204);
   });
+};
 
-  app.delete("/ht_02/api/testing/all-data", (_req: Request, res: Response) => {
-    blogs = [];
-    nextBlogId = 1;
-    res.sendStatus(204);
-  });
+export const getBlogs = () => blogs;
+export const getBlogById = (id: number) => blogs.find(b => b.id === id);
+export const clearBlogs = () => {
+  blogs = [];
+  nextBlogId = 1;
 };

@@ -3,17 +3,23 @@ import { Result, ValidationError, validationResult, check } from "express-valida
 
 // Basic Auth Middleware
 export const basicAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  if (req.method === "GET") return next();
-  if (req.method === "DELETE" && req.path === "/testing/all-data") return next();
+  // Skip auth for GET requests and testing endpoint
+  if (req.method === "GET" || req.path === "/ht_02/api/testing/all-data") {
+    return next();
+  }
 
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Basic ")) return res.sendStatus(401);
+  if (!authHeader || !authHeader.startsWith("Basic ")) {
+    return res.sendStatus(401);
+  }
 
   const base64 = authHeader.split(" ")[1];
   const decoded = Buffer.from(base64, "base64").toString();
   const [login, password] = decoded.split(":");
 
-  if (login !== "admin" || password !== "qwerty") return res.sendStatus(401);
+  if (login !== "admin" || password !== "qwerty") {
+    return res.sendStatus(401);
+  }
 
   next();
 };
@@ -21,9 +27,10 @@ export const basicAuthMiddleware = (req: Request, res: Response, next: NextFunct
 export const handleInputErrors = (req: Request, res: Response, next: NextFunction) => {
   const result: Result<ValidationError> = validationResult(req);
   if (!result.isEmpty()) {
-    const formattedErrors = result.array({ onlyFirstError: true }).map((err) => ({
+    const errors = result.array({ onlyFirstError: true });
+    const formattedErrors = errors.map((err) => ({
       message: err.msg,
-      field: (err as any).param, // безопасно для тестов
+      field: err.type === 'field' ? err.path : 'unknown', 
     }));
 
     return res.status(400).json({ errorsMessages: formattedErrors });
@@ -33,15 +40,36 @@ export const handleInputErrors = (req: Request, res: Response, next: NextFunctio
 
 // Blog validation rules
 export const blogValidationRules = [
-  check("name").trim().isLength({ min: 1, max: 15 }).withMessage("Name should be between 1 and 15 characters"),
+  check("name")
+    .trim()
+    .notEmpty().withMessage("Name is required")
+    .isLength({ max: 15 }).withMessage("Name should be max 15 characters"),
   check("description")
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage("Description is required and should be max 100 characters"),
+    .notEmpty().withMessage("Description is required")
+    .isLength({ max: 500 }).withMessage("Description should be max 500 characters"),
   check("websiteUrl")
     .trim()
-    .isLength({ max: 100 })
-    .withMessage("Website URL is too long")
-    .isURL()
-    .withMessage("Website URL should be a valid URL"),
+    .notEmpty().withMessage("Website URL is required")
+    .isLength({ max: 100 }).withMessage("Website URL is too long")
+    .isURL().withMessage("Website URL should be a valid URL"),
+];
+
+// Post validation rules
+export const postValidationRules = [
+  check("title")
+    .trim()
+    .notEmpty().withMessage("Title is required")
+    .isLength({ max: 30 }).withMessage("Title should be max 30 characters"),
+  check("shortDescription")
+    .trim()
+    .notEmpty().withMessage("Short description is required")
+    .isLength({ max: 100 }).withMessage("Short description should be max 100 characters"),
+  check("content")
+    .trim()
+    .notEmpty().withMessage("Content is required")
+    .isLength({ max: 1000 }).withMessage("Content should be max 1000 characters"),
+  check("blogId")
+    .notEmpty().withMessage("Blog ID is required")
+    .isInt().withMessage("Blog ID should be an integer"),
 ];

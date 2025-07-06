@@ -1,62 +1,103 @@
 import { Express, Request, Response } from "express";
-import { blogValidationRules, handleInputErrors, basicAuthMiddleware } from "./middleware";
-import { Blog } from "./types";
+import { postValidationRules, handleInputErrors, basicAuthMiddleware } from "./middleware";
+import { Post } from "./types";
+import { getBlogById } from "./blogs";
 
-let blogs: Blog[] = [];
-let nextBlogId = 1;
+let posts: Post[] = [];
+let nextPostId = 1;
 
-export const setupBlogs = (app: Express) => {
-  // GET all blogs (без авторизации)
-  app.get("/blogs", (_req: Request, res: Response) => {
-    res.status(200).json(blogs.map((b) => ({ ...b, id: b.id.toString() })));
+export const setupPosts = (app: Express) => {
+  // GET all posts (no auth required)
+  app.get("/ht_02/api/posts", (_req: Request, res: Response) => {
+    res.status(200).json(posts.map(p => ({
+      id: p.id.toString(),
+      title: p.title,
+      shortDescription: p.shortDescription,
+      content: p.content,
+      blogId: p.blogId.toString(),
+      blogName: p.blogName
+    })));
   });
 
-  // GET blog by id
-  app.get("/blogs/:id", (req: Request, res: Response) => {
-    const blog = blogs.find((b) => b.id === +req.params.id);
-    if (!blog) return res.sendStatus(404);
-    res.status(200).json({ ...blog, id: blog.id.toString() });
+  // GET post by id (no auth required)
+  app.get("/ht_02/api/posts/:id", (req: Request, res: Response) => {
+    const post = posts.find(p => p.id === +req.params.id);
+    if (!post) return res.sendStatus(404);
+    res.status(200).json({
+      id: post.id.toString(),
+      title: post.title,
+      shortDescription: post.shortDescription,
+      content: post.content,
+      blogId: post.blogId.toString(),
+      blogName: post.blogName
+    });
   });
 
-  // POST blog
-  app.post("/blogs", basicAuthMiddleware, blogValidationRules, handleInputErrors, (req: Request, res: Response) => {
-    const { name, description, websiteUrl } = req.body;
-    const newBlog: Blog = {
-      id: nextBlogId++,
-      name,
-      description,
-      websiteUrl,
-    };
-    blogs.push(newBlog);
-    res.status(201).json({ ...newBlog, id: newBlog.id.toString() });
-  });
+  // POST post (auth required)
+  app.post(
+    "/ht_02/api/posts",
+    basicAuthMiddleware,
+    postValidationRules,
+    handleInputErrors,
+    (req: Request, res: Response) => {
+      const { title, shortDescription, content, blogId } = req.body;
+      const blog = getBlogById(+blogId);
+      if (!blog) return res.sendStatus(400);
 
-  // PUT blog
-  app.put("/blogs/:id", basicAuthMiddleware, blogValidationRules, handleInputErrors, (req: Request, res: Response) => {
-    const blog = blogs.find((b) => b.id === +req.params.id);
-    if (!blog) return res.sendStatus(404);
+      const newPost: Post = {
+        id: nextPostId++,
+        title,
+        shortDescription,
+        content,
+        blogId: +blogId,
+        blogName: blog.name
+      };
+      posts.push(newPost);
+      res.status(201).json({
+        id: newPost.id.toString(),
+        title: newPost.title,
+        shortDescription: newPost.shortDescription,
+        content: newPost.content,
+        blogId: newPost.blogId.toString(),
+        blogName: newPost.blogName
+      });
+    }
+  );
 
-    blog.name = req.body.name;
-    blog.description = req.body.description;
-    blog.websiteUrl = req.body.websiteUrl;
+  // PUT post (auth required)
+  app.put(
+    "/ht_02/api/posts/:id",
+    basicAuthMiddleware,
+    postValidationRules,
+    handleInputErrors,
+    (req: Request, res: Response) => {
+      const post = posts.find(p => p.id === +req.params.id);
+      if (!post) return res.sendStatus(404);
 
-    res.sendStatus(204);
-  });
+      const { title, shortDescription, content, blogId } = req.body;
+      const blog = getBlogById(+blogId);
+      if (!blog) return res.sendStatus(400);
 
-  // DELETE blog
-  app.delete("/blogs/:id", basicAuthMiddleware, (req: Request, res: Response) => {
-    const index = blogs.findIndex((b) => b.id === +req.params.id);
+      post.title = title;
+      post.shortDescription = shortDescription;
+      post.content = content;
+      post.blogId = +blogId;
+      post.blogName = blog.name;
+
+      res.sendStatus(204);
+    }
+  );
+
+  // DELETE post (auth required)
+  app.delete("/ht_02/api/posts/:id", basicAuthMiddleware, (req: Request, res: Response) => {
+    const index = posts.findIndex(p => p.id === +req.params.id);
     if (index === -1) return res.sendStatus(404);
-    blogs.splice(index, 1);
-    res.sendStatus(204);
-  });
-
-  // DELETE all data (для тестов)
-  app.delete("/testing/all-data", (_req: Request, res: Response) => {
-    blogs = [];
-    nextBlogId = 1;
+    posts.splice(index, 1);
     res.sendStatus(204);
   });
 };
 
-export const getBlogs = () => blogs;
+export const clearPosts = () => {
+  posts = [];
+  nextPostId = 1;
+};

@@ -8,7 +8,7 @@ let nextPostId = 1;
 
 export const setupPosts = (app: Express) => {
   // GET all posts (no auth required)
-  app.get("/ht_02/api/posts", (_req: Request, res: Response) => {
+  app.get("/posts", (_req: Request, res: Response) => {
     res.status(200).json(posts.map(p => ({
       id: p.id.toString(),
       title: p.title,
@@ -20,7 +20,7 @@ export const setupPosts = (app: Express) => {
   });
 
   // GET post by id (no auth required)
-  app.get("/ht_02/api/posts/:id", (req: Request, res: Response) => {
+  app.get("/posts/:id", (req: Request, res: Response) => {
     const post = posts.find(p => p.id === +req.params.id);
     if (!post) return res.sendStatus(404);
     res.status(200).json({
@@ -35,7 +35,7 @@ export const setupPosts = (app: Express) => {
 
   // POST post (auth required)
   app.post(
-    "/ht_02/api/posts",
+    "/posts",
     basicAuthMiddleware,
     postValidationRules,
     handleInputErrors,
@@ -66,7 +66,7 @@ export const setupPosts = (app: Express) => {
 
   // PUT post (auth required)
   app.put(
-    "/ht_02/api/posts/:id",
+    "/posts/:id",
     basicAuthMiddleware,
     postValidationRules,
     handleInputErrors,
@@ -89,7 +89,7 @@ export const setupPosts = (app: Express) => {
   );
 
   // DELETE post (auth required)
-  app.delete("/ht_02/api/posts/:id", basicAuthMiddleware, (req: Request, res: Response) => {
+  app.delete("/posts/:id", basicAuthMiddleware, (req: Request, res: Response) => {
     const index = posts.findIndex(p => p.id === +req.params.id);
     if (index === -1) return res.sendStatus(404);
     posts.splice(index, 1);

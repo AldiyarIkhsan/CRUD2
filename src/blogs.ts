@@ -7,7 +7,7 @@ let nextBlogId = 1;
 
 export const setupBlogs = (app: Express) => {
   // GET all blogs (no auth required)
-  app.get("/ht_02/api/blogs", (_req: Request, res: Response) => {
+  app.get("/blogs", (_req: Request, res: Response) => {
     res.status(200).json(blogs.map(b => ({
       id: b.id.toString(),
       name: b.name,
@@ -17,7 +17,7 @@ export const setupBlogs = (app: Express) => {
   });
 
   // GET blog by id (no auth required)
-  app.get("/ht_02/api/blogs/:id", (req: Request, res: Response) => {
+  app.get("/blogs/:id", (req: Request, res: Response) => {
     const blog = blogs.find(b => b.id === +req.params.id);
     if (!blog) return res.sendStatus(404);
     res.status(200).json({
@@ -30,7 +30,7 @@ export const setupBlogs = (app: Express) => {
 
   // POST blog (auth required)
   app.post(
-    "/ht_02/api/blogs",
+    "/blogs",
     basicAuthMiddleware,
     blogValidationRules,
     handleInputErrors,
@@ -54,7 +54,7 @@ export const setupBlogs = (app: Express) => {
 
   // PUT blog (auth required)
   app.put(
-    "/ht_02/api/blogs/:id",
+    "/blogs/:id",
     basicAuthMiddleware,
     blogValidationRules,
     handleInputErrors,
@@ -71,7 +71,7 @@ export const setupBlogs = (app: Express) => {
   );
 
   // DELETE blog (auth required)
-  app.delete("/ht_02/api/blogs/:id", basicAuthMiddleware, (req: Request, res: Response) => {
+  app.delete("/blogs/:id", basicAuthMiddleware, (req: Request, res: Response) => {
     const index = blogs.findIndex(b => b.id === +req.params.id);
     if (index === -1) return res.sendStatus(404);
     blogs.splice(index, 1);

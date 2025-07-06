@@ -8,30 +8,56 @@ let nextPostId = 1;
 
 export const setupPosts = (app: Express) => {
   // GET all posts (no auth required)
-  app.get("/posts", (_req: Request, res: Response) => {
-    res.status(200).json(posts.map(p => ({
-      id: p.id.toString(),
-      title: p.title,
-      shortDescription: p.shortDescription,
-      content: p.content,
-      blogId: p.blogId.toString(),
-      blogName: p.blogName
-    })));
+app.get("/posts/:id", (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.sendStatus(404);
+  
+  const post = posts.find(p => p.id === id);
+  if (!post) return res.sendStatus(404);
+  
+  res.status(200).json({
+    id: post.id.toString(),
+    title: post.title,
+    shortDescription: post.shortDescription,
+    content: post.content,
+    blogId: post.blogId.toString(),
+    blogName: post.blogName
   });
+});
 
-  // GET post by id (no auth required)
-  app.get("/posts/:id", (req: Request, res: Response) => {
-    const post = posts.find(p => p.id === +req.params.id);
-    if (!post) return res.sendStatus(404);
-    res.status(200).json({
-      id: post.id.toString(),
-      title: post.title,
-      shortDescription: post.shortDescription,
-      content: post.content,
-      blogId: post.blogId.toString(),
-      blogName: post.blogName
+app.post(
+  "/posts",
+  basicAuthMiddleware,
+  postValidationRules,
+  handleInputErrors,
+  (req: Request, res: Response) => {
+    const { title, shortDescription, content, blogId } = req.body;
+    const blog = getBlogById(parseInt(blogId, 10));
+    if (!blog) return res.sendStatus(400);
+
+    const newPost: Post = {
+      id: nextPostId,
+      title,
+      shortDescription,
+      content,
+      blogId: parseInt(blogId, 10),
+      blogName: blog.name
+    };
+    
+    posts.push(newPost);
+    
+    res.status(201).json({
+      id: newPost.id.toString(),
+      title: newPost.title,
+      shortDescription: newPost.shortDescription,
+      content: newPost.content,
+      blogId: newPost.blogId.toString(),
+      blogName: newPost.blogName
     });
-  });
+    
+    nextPostId++;
+  }
+);
 
   // POST post (auth required)
   app.post(

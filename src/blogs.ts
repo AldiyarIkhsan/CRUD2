@@ -18,8 +18,12 @@ export const setupBlogs = (app: Express) => {
 
   // GET blog by id (no auth required)
   app.get("/blogs/:id", (req: Request, res: Response) => {
-    const blog = blogs.find(b => b.id === +req.params.id);
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.sendStatus(404);
+    
+    const blog = blogs.find(b => b.id === id);
     if (!blog) return res.sendStatus(404);
+    
     res.status(200).json({
       id: blog.id.toString(),
       name: blog.name,
@@ -37,18 +41,25 @@ export const setupBlogs = (app: Express) => {
     (req: Request, res: Response) => {
       const { name, description, websiteUrl } = req.body;
       const newBlog: Blog = {
-        id: nextBlogId++,
+        id: nextBlogId,
         name,
         description,
         websiteUrl,
       };
+      
+      // Store the blog before responding
       blogs.push(newBlog);
+      
+      // Respond with the created blog
       res.status(201).json({
         id: newBlog.id.toString(),
         name: newBlog.name,
         description: newBlog.description,
         websiteUrl: newBlog.websiteUrl
       });
+      
+      // Increment ID after successful creation
+      nextBlogId++;
     }
   );
 
@@ -59,21 +70,29 @@ export const setupBlogs = (app: Express) => {
     blogValidationRules,
     handleInputErrors,
     (req: Request, res: Response) => {
-      const blog = blogs.find(b => b.id === +req.params.id);
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.sendStatus(404);
+
+      const blog = blogs.find(b => b.id === id);
       if (!blog) return res.sendStatus(404);
 
       const { name, description, websiteUrl } = req.body;
       blog.name = name;
       blog.description = description;
       blog.websiteUrl = websiteUrl;
+      
       res.sendStatus(204);
     }
   );
 
   // DELETE blog (auth required)
   app.delete("/blogs/:id", basicAuthMiddleware, (req: Request, res: Response) => {
-    const index = blogs.findIndex(b => b.id === +req.params.id);
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.sendStatus(404);
+
+    const index = blogs.findIndex(b => b.id === id);
     if (index === -1) return res.sendStatus(404);
+    
     blogs.splice(index, 1);
     res.sendStatus(204);
   });

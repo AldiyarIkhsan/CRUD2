@@ -58,7 +58,6 @@ app.post(
     nextPostId++;
   }
 );
-
   // POST post (auth required)
   app.post(
     "/posts",

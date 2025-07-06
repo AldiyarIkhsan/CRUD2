@@ -1,13 +1,16 @@
 import { Request, Response, NextFunction } from "express";
-import { validationResult, ValidationError, check } from "express-validator";
+import {
+  check,
+  validationResult,
+  ValidationError as ExpressValidatorError,
+} from "express-validator";
 
 export const basicAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (req.method === "GET") return next();
-
   if (req.method === "DELETE" && req.path === "/ht_02/api/testing/all-data") return next();
 
   const authHeader = req.headers["authorization"];
-  if (!authHeader) return res.sendStatus(401);
+  if (!authHeader || !authHeader.startsWith("Basic ")) return res.sendStatus(401);
 
   const base64 = authHeader.split(" ")[1];
   const decoded = Buffer.from(base64, "base64").toString();
@@ -18,22 +21,41 @@ export const basicAuthMiddleware = (req: Request, res: Response, next: NextFunct
   next();
 };
 
+export const handleInputErrors = (req: Request, res: Response, next: NextFunction) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      errorsMessages: errors.array({ onlyFirstError: true }).map((err) => ({
+        message: err.msg,
+        field: (err as any).param
+      }))
+    });
+  }
+  next();
+};
+
 export const blogValidationRules = [
-  check("name").trim().isLength({ min: 1, max: 30 }).withMessage("Name is required and should be max 30 characters"),
+  check("name")
+    .trim()
+    .isLength({ min: 1, max: 15 })
+    .withMessage("Name should be between 1 and 15 characters"),
   check("description")
     .trim()
     .isLength({ min: 1, max: 100 })
     .withMessage("Description is required and should be max 100 characters"),
   check("websiteUrl")
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage("Website URL is required and should be max 100 characters")
+    .isLength({ max: 100 })
+    .withMessage("Website URL is too long")
     .isURL()
     .withMessage("Website URL should be a valid URL"),
 ];
 
 export const postValidationRules = [
-  check("title").trim().isLength({ min: 1, max: 30 }).withMessage("Title is required and should be max 30 characters"),
+  check("title")
+    .trim()
+    .isLength({ min: 1, max: 30 })
+    .withMessage("Title is required and should be max 30 characters"),
   check("shortDescription")
     .trim()
     .isLength({ min: 1, max: 100 })
@@ -42,18 +64,10 @@ export const postValidationRules = [
     .trim()
     .isLength({ min: 1, max: 1000 })
     .withMessage("Content is required and should be max 1000 characters"),
-  check("blogId").trim().notEmpty().withMessage("Blog ID is required").isInt().withMessage("Blog ID must be a number"),
+  check("blogId")
+    .trim()
+    .notEmpty()
+    .withMessage("Blog ID is required")
+    .isInt()
+    .withMessage("Blog ID must be a number"),
 ];
-
-export const handleInputErrors = (req: Request, res: Response, next: NextFunction) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      errorsMessages: errors.array({ onlyFirstError: true }).map((err: ValidationError) => ({
-        message: err.msg,
-        field: err.type === "field" ? err.path : "unknown",
-      })),
-    });
-  }
-  next();
-};

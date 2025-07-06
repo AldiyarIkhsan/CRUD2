@@ -1,10 +1,9 @@
 import express from "express";
-import { setupPosts } from "./posts";
 import { setupBlogs } from "./blogs";
 
 const app = express();
+app.use(express.json());
 
-setupPosts(app);
 setupBlogs(app);
 
 const PORT = process.env.PORT || 5001;

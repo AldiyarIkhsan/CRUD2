@@ -1,79 +1,62 @@
 import { Express, Request, Response } from "express";
-import { postValidationRules, handleInputErrors, basicAuthMiddleware } from "./middleware";
-import { Post } from "./types";
+import { blogValidationRules, handleInputErrors, basicAuthMiddleware } from "./middleware";
+import { Blog } from "./types";
 
-let posts: Post[] = [];
-let nextPostId = 1;
+let blogs: Blog[] = [];
+let nextBlogId = 1;
 
-export const setupPosts = (app: Express) => {
-  app.use(basicAuthMiddleware);
-
-  app.get("/posts", (_req: Request, res: Response) => {
-    res.status(200).json(posts.map(p => ({
-      ...p,
-      id: p.id.toString(),
-      blogId: p.blogId.toString()
-    })));
+export const setupBlogs = (app: Express) => {
+  // GET all blogs (без авторизации)
+  app.get("/blogs", (_req: Request, res: Response) => {
+    res.status(200).json(blogs.map((b) => ({ ...b, id: b.id.toString() })));
   });
 
-  app.get("/posts/:id", (req: Request, res: Response) => {
-    const post = posts.find(p => p.id === +req.params.id);
-    if (!post) return res.sendStatus(404);
-    res.status(200).json({
-      ...post,
-      id: post.id.toString(),
-      blogId: post.blogId.toString()
-    });
+  // GET blog by id
+  app.get("/blogs/:id", (req: Request, res: Response) => {
+    const blog = blogs.find((b) => b.id === +req.params.id);
+    if (!blog) return res.sendStatus(404);
+    res.status(200).json({ ...blog, id: blog.id.toString() });
   });
 
-  app.post(
-    "/posts",
-    postValidationRules,
-    handleInputErrors,
-    (req: Request, res: Response) => {
-      const { title, shortDescription, content, blogId } = req.body;
+  // POST blog
+  app.post("/blogs", basicAuthMiddleware, blogValidationRules, handleInputErrors, (req: Request, res: Response) => {
+    const { name, description, websiteUrl } = req.body;
+    const newBlog: Blog = {
+      id: nextBlogId++,
+      name,
+      description,
+      websiteUrl,
+    };
+    blogs.push(newBlog);
+    res.status(201).json({ ...newBlog, id: newBlog.id.toString() });
+  });
 
-      const newPost: Post = {
-        id: nextPostId++,
-        title,
-        shortDescription,
-        content,
-        blogId: +blogId,
-        blogName: "Sample Blog Name",
-      };
+  // PUT blog
+  app.put("/blogs/:id", basicAuthMiddleware, blogValidationRules, handleInputErrors, (req: Request, res: Response) => {
+    const blog = blogs.find((b) => b.id === +req.params.id);
+    if (!blog) return res.sendStatus(404);
 
-      posts.push(newPost);
-      res.status(201).json({
-        ...newPost,
-        id: newPost.id.toString(),
-        blogId: newPost.blogId.toString()
-      });
-    }
-  );
+    blog.name = req.body.name;
+    blog.description = req.body.description;
+    blog.websiteUrl = req.body.websiteUrl;
 
-  app.put(
-    "/posts/:id",
-    postValidationRules,
-    handleInputErrors,
-    (req: Request, res: Response) => {
-      const post = posts.find(p => p.id === +req.params.id);
-      if (!post) return res.sendStatus(404);
+    res.sendStatus(204);
+  });
 
-      const { title, shortDescription, content, blogId } = req.body;
-      post.title = title;
-      post.shortDescription = shortDescription;
-      post.content = content;
-      post.blogId = +blogId;
-      post.blogName = "Sample Blog Name";
-
-      res.sendStatus(204);
-    }
-  );
-
-  app.delete("/posts/:id", (req: Request, res: Response) => {
-    const index = posts.findIndex(p => p.id === +req.params.id);
+  // DELETE blog
+  app.delete("/blogs/:id", basicAuthMiddleware, (req: Request, res: Response) => {
+    const index = blogs.findIndex((b) => b.id === +req.params.id);
     if (index === -1) return res.sendStatus(404);
-    posts.splice(index, 1);
+    blogs.splice(index, 1);
+    res.sendStatus(204);
+  });
+
+  // DELETE all data (для тестов)
+  app.delete("/testing/all-data", (_req: Request, res: Response) => {
+    blogs = [];
+    nextBlogId = 1;
     res.sendStatus(204);
   });
 };
+
+export const getBlogs = () => blogs;
